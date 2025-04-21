@@ -341,7 +341,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath></IncludePath>
+              <IncludePath>..\Automotive-Smart-Safety-System-</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -359,7 +359,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath></IncludePath>
+              <IncludePath>..\Automotive-Smart-Safety-System-</IncludePath>
             </VariousControls>
           </Aads>
           <LDads>
@@ -389,6 +389,21 @@
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\main.c</FilePath>
+            </File>
+            <File>
+              <FileName>basic_io.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\basic_io.c</FilePath>
+            </File>
+            <File>
+              <FileName>consoleprint.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\consoleprint.c</FilePath>
+            </File>
+            <File>
+              <FileName>retarget.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\retarget.c</FilePath>
             </File>
           </Files>
         </Group>
