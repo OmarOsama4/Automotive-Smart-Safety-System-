@@ -48,9 +48,5 @@ This project implements an **Automotive Smart Safety System** using the **TM4C12
    - Build the project using Keil’s build tools.
    - Program the microcontroller via the appropriate debugging tool (e.g., **JTAG** or **SWD**).
 
-## How to Contribute:
-- **Fork the repository** to make changes to your own copy.
-- **Clone** the repository locally to begin working on the project.
-- **Create a new branch** for any changes or new features.
-- Submit a **pull request** for any changes you wish to contribute.
+
 
