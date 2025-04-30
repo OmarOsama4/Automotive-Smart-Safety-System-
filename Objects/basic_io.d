@@ -1,5 +1,6 @@
-./objects/main.o: main.c \
-  ..\Automotive-Smart-Safety-System-\tm4c123gh6pm.h \
+./objects/basic_io.o: basic_io.c \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
+  ..\Automotive-Smart-Safety-System-\consoleprint.h \
   C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\FreeRTOS.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stddef.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \

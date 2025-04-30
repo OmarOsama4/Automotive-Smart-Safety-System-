@@ -391,19 +391,9 @@
               <FilePath>.\main.c</FilePath>
             </File>
             <File>
-              <FileName>basic_io.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\basic_io.c</FilePath>
-            </File>
-            <File>
-              <FileName>consoleprint.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\consoleprint.c</FilePath>
-            </File>
-            <File>
-              <FileName>retarget.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\retarget.c</FilePath>
+              <FileName>tm4c123gh6pm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\tm4c123gh6pm.h</FilePath>
             </File>
           </Files>
         </Group>
