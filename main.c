@@ -2,11 +2,11 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <stdint.h> 
-
+#include "semphr.h"
 /***************************************************************************/
 	//The RGB lights for the ultrasonic sensor on PF1, PF2, PF3
 	//The ultrasonic sensor -> PA3 & PA4
-	//The potentiometer     -> PA2
+	//The potentiometer     -> PE2
 	//The Buzzar 						-> PF0 
 	//Echo                  -> PB6
 	//Trigger								-> PA4
@@ -14,6 +14,7 @@
 	//Red Led               -> PB2
 	//Blue Led              -> PB1
 	//Green Led             -> PB0	
+	//Ignition Switch       -> PB4
 /***************************************************************************/
 
 /*Define The required Inputs and Outputs*/
@@ -31,23 +32,31 @@
 #define ADC_SEQ0 0x01
 
 //The UltraSonic 
-#define TRIGGER_PIN   0x08  // PA3 for Trigger (bit 3)
-#define ECHO_PIN      0x10  // PA4 for Echo (bit 4)
 #define BUZZER_PIN     0x08  // PB3 (Buzzer) 
 #define MAX_DISTANCE 100  // Maximum distance in cm (for Green LED)
 
 //Ignition Switch
-#define IGNITION_SWITCH 0x04
+#define IGNITION_SWITCH 0x10
 
 #define GEAR_SWITCH_PIN 0x80
 
+#define LCD_ADDR 0x27  // LCD I2C address (can vary depending on the module)
+#define SCL_PIN (1 << 4)  // PC4 for SCL
+#define SDA_PIN (1 << 5)  // PC5 for SDA
+#define I2C_MCR_MSTR   0x00000010  // I2C Master Enable bit
+#define I2C_MCR_IRS    0x00000001  // I2C Interrupt Request Status bit
+
 /***********************************************************************************************************/
 float speed;
-int doorLocked = 1;  // 0: Unlocked, 1: Locked
-uint32_t time; /*stores pulse on time */
-uint32_t distance; /* stores measured distance value */
-int gearReverse = 0;        // Flag to indicate reverse gear (0 = normal, 1 = reverse)
-
+int doorLocked = 0;  		             // 0: Unlocked, 1: Locked
+uint32_t time; 					             //stores pulse on time 
+uint32_t distance; 			             // stores measured distance value */
+int gearReverse = 0;  	             // 0: Normal Gear, 1: Reverse Gear
+uint32_t ignitionSwitchState ;
+uint32_t gearSwitchState ;
+SemaphoreHandle_t xBinarySemaphore; 
+char globalMessage[100];
+int prevGearSwitchState = 1;  // Start with "gear switch not pressed" (active high)
 /***********************************************************************************************************/
 
 /*
@@ -206,8 +215,8 @@ void initUltrasonicLEDs(void) {
     while ((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R1) == 0) {}  // Wait until Port B is ready
 
     // Configure PB0 (Green LED), PB1 (Blue LED), PB2 (Red LED) as output
-    GPIO_PORTB_DIR_R |= (0x01 | 0x02 | 0x04); // Set PB0, PB1, PB2 as outputs
-    GPIO_PORTB_DEN_R |= (0x01 | 0x02 | 0x04); // Enable digital function on PB0, PB1, PB2
+    GPIO_PORTB_DIR_R |= (0x01 | 0x02 | 0x04| 0x08); // Set PB0, PB1, PB2 as outputs
+    GPIO_PORTB_DEN_R |= (0x01 | 0x02 | 0x04| 0x08); // Enable digital function on PB0, PB1, PB2
 }
 
 void Delay_MicroSecond(int time)
@@ -288,15 +297,6 @@ void Delay(unsigned long counter)
 }
 
 
-// Function to initialize the buzzer
-void initBuzzer(void) {
-    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1;  // Enable clock for Port B
-    while ((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R1) == 0) {}  // Wait until Port B is ready
-
-    GPIO_PORTB_DIR_R |= 0x08;  // Set PB3 as output for Buzzer
-    GPIO_PORTB_DEN_R |= 0x08;  // Enable digital function for PB3
-}
-
 // Function to control the RGB LED based on proximity
 void controlLEDAndBuzzer(uint32_t distance) {
     // Turn off all LEDs first
@@ -306,9 +306,9 @@ void controlLEDAndBuzzer(uint32_t distance) {
     if (distance > 100) {  // Safe zone (Green LED)
         GPIO_PORTB_DATA_R |= 0x01;
     } else if (distance > 30) {  // Caution zone (Yellow LED)
-        GPIO_PORTB_DATA_R |= 0x04;
-    } else {  // Danger zone (Red LED)
         GPIO_PORTB_DATA_R |= 0x02;
+    } else {  // Danger zone (Red LED)
+        GPIO_PORTB_DATA_R |= 0x04;
     }
 
     // Control buzzer: beep faster as the distance decreases
@@ -331,40 +331,61 @@ void controlLEDAndBuzzer(uint32_t distance) {
 
 // FreeRTOS Task to handle ultrasonic sensor and display proximity
 void UltrasonicTask(void *pvParameters) {
+	Timer0ACapture_init();  /*initialize Timer0A in edge edge time */
     while (1) {
-        // If the gear is in reverse, measure distance using the ultrasonic sensor
-        if (gearReverse == 1) {
-            distance = Measure_distance();  // Measure distance from the sensor
-            controlLEDAndBuzzer(distance);  // Control LEDs and buzzer based on distance
-        }
-        vTaskDelay(pdMS_TO_TICKS(500));  // Delay for 500ms before next measurement
+			if (gearReverse ==1){
+			  time = Measure_distance(); /* take pulse duration measurement */ 
+				distance = (time * 10625)/10000000; /* convert pulse duration into distance */
+        controlLEDAndBuzzer(distance);  // Control LEDs and buzzer based on distance
+			}
+			else {
+				GPIO_PORTB_DATA_R &= ~(0x01 | 0x02 | 0x04 | 0x08);
+			}
+			vTaskDelay(pdMS_TO_TICKS(500));  // Delay for 500ms before next measurement
     }
 }
 
-
-
-
 /********************************************************************************************************/
 void initIgnitionSwitch(void) {
-    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1;  // Enable clock for Port B
-    while ((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R1) == 0) {}  // Wait until Port B is ready
+    SYSCTL->RCGCGPIO |= (1 << 1);                        // Clock to PortB
+    while((SYSCTL->PRGPIO & (1 << 1)) == 0);             // Ensure Clock worked for PortB
+    GPIOB->DIR &= ~(1 << 4);                             // PB4 input (Ignition switch)
+    GPIOB->DEN |= (1 << 4);                              // Digital enable for PB4
+    GPIOB->PDR |= (1 << 4);                              // Pull-down resistor on PB4 (reads LOW when not pressed)
 
-    GPIO_PORTB_DIR_R &= ~0x10;  // Set PB4 as input (0x10 is bit 4)
-    GPIO_PORTB_DEN_R |= 0x10;   // Enable digital function for PB4
-    GPIO_PORTB_PDR_R |= 0x10;   // Enable pull-down resistor on PB4 (reads LOW when not pressed)
+    GPIOB->IS &= ~(1 << 4);                              // Edge sensitive for PB4
+    GPIOB->IEV &= ~(1 << 4);                             // Falling edge (detect press)
+    GPIOB->ICR |= (1 << 4);                              // Clear any pending interrupts on PB4
+    GPIOB->IM |= (1 << 4);                               // Unmask interrupt on PB4
+    NVIC_EnableIRQ(GPIOB_IRQn);                          // Enable GPIOB interrupt in NVIC
 }
 
+// This is the interrupt handler for GPIO Port B
+void GPIOB_Handler(void) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    GPIOB->ICR = (1 << 4);  // Clear PB4 interrupt flag
+
+    // Give the semaphore from ISR to unblock the task
+    xSemaphoreGiveFromISR(xBinarySemaphore, &xHigherPriorityTaskWoken);
+
+    // If a higher priority task was woken, yield the processor to it
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
 
 void IgnitionMonitorTask(void *pvParameters) {
     while (1) {
-        // Check if Ignition Switch is OFF (button pressed = PB2 LOW)
-        if ((GPIO_PORTB_DATA_R & IGNITION_SWITCH) == 0) {
-					if (doorLocked == 1) {
-						toggleDoorLock();  // Unlock the doors
-						}
-					}
-        vTaskDelay(pdMS_TO_TICKS(200));  // Check every 200 ms
-			}
+			ignitionSwitchState = GPIO_PORTB_DATA_R & IGNITION_SWITCH;
+        // Wait for the semaphore to be given from the ISR
+        if (xSemaphoreTake(xBinarySemaphore, portMAX_DELAY)) {
+            // Check if Ignition Switch is OFF (PB4 is LOW)
+            if ((GPIO_PORTB_DATA_R & IGNITION_SWITCH) == 0) {
+                if (doorLocked == 1) {
+                    toggleDoorLock();  // Unlock the doors
+                }
+            }
+        }
+    }
 }
 
 /********************************************************************************************************/
@@ -374,58 +395,114 @@ void initGearSwitch(void) {
 
     GPIO_PORTB_DIR_R &= ~GEAR_SWITCH_PIN;  // Set PB7 as input
     GPIO_PORTB_DEN_R |= GEAR_SWITCH_PIN;   // Enable digital function for PB7
-    GPIO_PORTB_PUR_R |= GEAR_SWITCH_PIN;   // Enable pull-up resistor on PB7
+    GPIO_PORTB_PDR_R |= GEAR_SWITCH_PIN;   // Enable pull-down resistor on PB7
 }
 
 
-void toggleGearState(void) {
-    if (gearReverse == 0) {
-        gearReverse = 1;  // Set to reverse gear
-    } else {
-        gearReverse = 0;  // Set to normal gear;
-    }
+void gearreverseon(void) {
+    gearReverse = 1;
 }
 
+void gearreverseoff(void) {
+    gearReverse = 0;
+}
+
+// FreeRTOS Task to monitor and handle gear switching
 void GearSwitchTask(void *pvParameters) {
     while (1) {
-        // Check if the Gear Switch button is pressed (active low)
-        if ((GPIO_PORTB_DATA_R & GEAR_SWITCH_PIN) == 0) {  // Button pressed (PB7 is low)
-            toggleGearState();  // Toggle the gear state
-            vTaskDelay(pdMS_TO_TICKS(200));  // Debounce delay to prevent multiple toggles from one press
+			gearSwitchState = GPIO_PORTB_DATA_R & GEAR_SWITCH_PIN;
+        // Check if the Gear Switch button is pressed (active high)
+        if ((GPIO_PORTB_DATA_R & GEAR_SWITCH_PIN) == 0) {  // Button pressed (PB7 is high)
+            gearreverseoff(); 
         }
+				else {
+					gearreverseon();
+				}
         vTaskDelay(pdMS_TO_TICKS(100));  // Short delay before checking again
     }
 }
 /********************************************************************************************************/
 
+/*LCD implemetation*/
+
+
+// Initialize I2C1
+void I2C1_Init(void) {
+    SYSCTL_RCGCI2C_R |= SYSCTL_RCGCI2C_R1;    // Enable clock for I2C1
+    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R2;  // Enable clock for Port C (SCL, SDA on PC4, PC5)
+
+    while ((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R2) == 0); // Wait for Port C to be ready
+
+    // Configure SCL (PC4) and SDA (PC5) for I2C
+    GPIO_PORTC_AFSEL_R |= SCL_PIN | SDA_PIN;   // Enable alternate function for SCL and SDA
+    GPIO_PORTC_DEN_R |= SCL_PIN | SDA_PIN;     // Enable digital function for SCL and SDA
+    GPIO_PORTC_ODR_R |= SDA_PIN;               // Enable open-drain for SDA
+
+    // Configure I2C1 as master
+    I2C1_MCR_R = I2C_MCR_MSTR | I2C_MCR_IRS;   // Set I2C1 as master and use system clock
+    I2C1_MTPR_R = 0x07;                        // Set I2C1 SCL clock speed (Standard mode ~100kHz)
+}
+
+// Write byte to the LCD via I2C
+void I2C1_Write(uint8_t address, uint8_t data) {
+    I2C1_MSA_R = (address << 1); // Set the address for write (shifted 1 bit)
+    I2C1_MDR_R = data;           // Set the data to be sent
+    I2C1_MCS_R = I2C_MCS_RUN | I2C_MCS_START | I2C_MCS_STOP;  // Start transmission
+
+    // Wait until the transmission is completed
+    while (I2C1_MCS_R & I2C_MCS_BUSY);
+}
+
+// LCD Initialization (I2C version)
+void LCD_Init(void) {
+    // Initialize the I2C interface
+    I2C1_Init();
+
+    // Send initialization commands to LCD (using I2C)
+    I2C1_Write(LCD_ADDR, 0x38);  // Function set: 8-bit mode, 2 lines
+    I2C1_Write(LCD_ADDR, 0x0C);  // Display ON, Cursor OFF, Blink OFF
+    I2C1_Write(LCD_ADDR, 0x06);  // Entry Mode Set: Increment cursor, no shift
+    I2C1_Write(LCD_ADDR, 0x01);  // Clear display
+    I2C1_Write(LCD_ADDR, 0x02);  // Return home
+}
+
+// Display a character on the LCD
+void LCD_DisplayChar(char character) {
+    I2C1_Write(LCD_ADDR, character);  // Write character to LCD
+}
+
+// Display a string on the LCD
+void LCD_DisplayString(char* str) {
+    while (*str) {
+        LCD_DisplayChar(*str++); // Display each character from the string
+    }
+}
+
+/*********************************************************************************************************/ 
+
 
 int main(void) {
 	
   // Initialize LEDs (PF1, PF2 for door lock/unlock status)
-  //initLEDs();
-	//initButtons();
-  //initIgnitionSwitch();
+  initLEDs();
+	initButtons();
+  initIgnitionSwitch();
 	initUltrasonicLEDs();
-	
-	
-  //initPotentiometer(); 
-  initBuzzer();
-	
+	initGearSwitch();
+  initPotentiometer(); 
+	xBinarySemaphore = xSemaphoreCreateBinary();
 
-	//GPIO_PORTF_DATA_R |= GREEN_LED;
-		
-
+	GPIO_PORTF_DATA_R |= RED_LED;
   // Create FreeRTOS tasks
-  //xTaskCreate(ButtonControlTask, "Button Control Task", 128, NULL, 2, NULL);
-	//xTaskCreate(IgnitionMonitorTask, "Ignition Monitor", 128, NULL, 1, NULL);
-	//xTaskCreate(SpeedCheckTask, "Speed Check Task", 128, NULL, 3, NULL);
-	xTaskCreate(GearSwitchTask, "Gear Switch Task", 128, NULL, 1, NULL);
+  xTaskCreate(ButtonControlTask, "Button Control Task", 128, NULL, 2, NULL);
+	xTaskCreate(IgnitionMonitorTask, "Ignition Monitor", 128, NULL, 1, NULL);
+	xTaskCreate(SpeedCheckTask, "Speed Check Task", 128, NULL, 3, NULL);
 	xTaskCreate(UltrasonicTask, "Ultrasonic Task", 128, NULL, 1, NULL);
+	xTaskCreate(GearSwitchTask, "Gear Switch Task", 128, NULL, 1, NULL);
 	
-		
 
     // Start the FreeRTOS scheduler
-    vTaskStartScheduler();
+   vTaskStartScheduler();
 		
-		return 0; 
+		return 0; //This part will not reach 
 }

@@ -1,0 +1,7 @@
+current Bugs: 
+1) Potentiometer overwrite on the door status when it's already lock it. 
+2) ignition switch interrupt have some issues which it should be working on falling edge but it works on rising and falling. 
+
+upcoming tasks: 
+1) LCD implementation 
+2) project finishing 

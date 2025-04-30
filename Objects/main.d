@@ -22,4 +22,6 @@
   C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\portable\GCC\ARM_CM4F\portmacro.h \
   C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\mpu_wrappers.h \
   C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\task.h \
-  C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\list.h
+  C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\list.h \
+  C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\semphr.h \
+  C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\queue.h
