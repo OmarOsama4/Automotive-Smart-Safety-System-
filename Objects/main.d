@@ -24,4 +24,13 @@
   C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\task.h \
   C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\list.h \
   C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\semphr.h \
-  C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\queue.h
+  C:\Users\USER\AppData\Local\Arm\Packs\ARM\CMSIS-FreeRTOS\11.1.0\Source\include\queue.h \
+  ..\Automotive-Smart-Safety-System-\driverlib\sysctl.h \
+  C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdbool.h \
+  ..\Automotive-Smart-Safety-System-\driverlib\i2c.h \
+  ..\Automotive-Smart-Safety-System-\driverlib\gpio.h \
+  ..\Automotive-Smart-Safety-System-\driverlib\pin_map.h \
+  ..\Automotive-Smart-Safety-System-\inc\hw_memmap.h \
+  ..\Automotive-Smart-Safety-System-\inc\hw_types.h \
+  ..\Automotive-Smart-Safety-System-\inc\hw_i2c.h \
+  ..\Automotive-Smart-Safety-System-\inc\hw_gpio.h
