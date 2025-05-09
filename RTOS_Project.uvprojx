@@ -191,7 +191,7 @@
             <hadIRAM2>0</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
-            <useUlib>0</useUlib>
+            <useUlib>1</useUlib>
             <EndSel>0</EndSel>
             <uLtcg>0</uLtcg>
             <nSecure>0</nSecure>
@@ -331,7 +331,7 @@
             <uGnu>1</uGnu>
             <useXO>0</useXO>
             <v6Lang>3</v6Lang>
-            <v6LangP>1</v6LangP>
+            <v6LangP>5</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -341,7 +341,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>..\Automotive-Smart-Safety-System-</IncludePath>
+              <IncludePath>C:\ti\TivaWare_C_Series-2.2.0.295\</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -363,7 +363,7 @@
             </VariousControls>
           </Aads>
           <LDads>
-            <umfTarg>0</umfTarg>
+            <umfTarg>1</umfTarg>
             <Ropi>0</Ropi>
             <Rwpi>0</Rwpi>
             <noStLib>0</noStLib>
@@ -394,6 +394,26 @@
               <FileName>tm4c123gh6pm.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\tm4c123gh6pm.h</FilePath>
+            </File>
+            <File>
+              <FileName>Port_Config.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Port_Config.c</FilePath>
+            </File>
+            <File>
+              <FileName>Port_Config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Port_Config.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Library</GroupName>
+          <Files>
+            <File>
+              <FileName>driverlib.lib</FileName>
+              <FileType>4</FileType>
+              <FilePath>C:\ti\TivaWare_C_Series-2.2.0.295\driverlib\rvmdk\driverlib.lib</FilePath>
             </File>
           </Files>
         </Group>

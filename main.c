@@ -58,14 +58,6 @@
 
 #define GEAR_SWITCH_PIN 0x80
 
-// LCD Control Pins (RS, RW, EN)
-#define LCD_RS 0x01  // Register Select pin
-#define LCD_RW 0x02  // Read/Write pin
-#define LCD_EN 0x04  // Enable pin
-
-// I2C Pins (SDA: PC4, SCL: PC5)
-#define SCL_PIN 0x10  // PC4
-#define SDA_PIN 0x20  // PC5
 
 #define GPIO_PB2_I2C0SCL 0x00010803
 #define GPIO_PB3_I2C0SDA 0x00010C03
@@ -134,7 +126,11 @@ typedef struct
   uint8_t _backlightval;
 } LCD_I2C;
 
+#define DOOR_OPEN_PIN 0x01  // Assume the driver's door is connected to GPIO_PORTD_PIN0
+#define DOOR_THRESHOLD 10    // Speed threshold for vehicle to be considered moving (e.g., 1 km/h)
+
 /***********************************************************************************************************/
+
 float speed;
 int doorLocked = 0;  		             // 0: Unlocked, 1: Locked
 float time; 					             //stores pulse on time 
@@ -144,8 +140,10 @@ uint32_t ignitionSwitchState ;
 uint32_t gearSwitchState ;
 SemaphoreHandle_t xBinarySemaphore; 
 SemaphoreHandle_t xMutex;
-int prevGearSwitchState = 1;  // Start with "gear switch not pressed" (active high)
 char diststr[20];
+char speedStr[20];
+bool globalSpeed=0;
+bool globalLock=0;
 /********************************************************************************************************/
 
 void Delay(unsigned long counter)
@@ -155,7 +153,6 @@ void Delay(unsigned long counter)
 	for(i=0; i< counter*1000; i++);
 }
 
-
 /********************************************************************************************************/
 void initBuzzer(void) {
     // Enable clock for Port B
@@ -163,8 +160,8 @@ void initBuzzer(void) {
     while ((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R1) == 0) {}  // Wait until Port B is ready
 
     // Configure PB0 as output for the buzzer
-    GPIO_PORTB_DIR_R |= 0x01;   // Set PB0 as an output pin
-    GPIO_PORTB_DEN_R |= 0x01;   // Enable digital function for PB0
+    GPIO_PORTB_DIR_R |= BUZZER_PIN;   // Set PB0 as an output pin
+    GPIO_PORTB_DEN_R |= BUZZER_PIN;   // Enable digital function for PB0
 }
 /********************************************************************************************************/
 void initGearSwitch(void) {
@@ -447,22 +444,6 @@ void displayTextOnLCD(LCD_I2C *display, const char *text, uint8_t row, uint8_t c
 LCD_I2C dis;
 /***********************************************************************************************************/
 
-/*
-The manual Lock and Unlock functions
-*/
-
-
-// Function to initialize LEDs (PF1 and PF2) for door status
-void initLEDs(void) {
-    // Enable Port F (GPIO Port F)
-    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R5;  // Enable GPIO Port F clock
-    while ((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R5) == 0) {}  // Wait for Port F to be ready
-
-    // Set PF1 and PF2 as output (LEDs)
-    GPIO_PORTF_DIR_R |= GREEN_LED | BLUE_LED | RED_LED;   // Set PF1 and PF2 as output
-    GPIO_PORTF_DEN_R |= GREEN_LED | BLUE_LED | RED_LED;   // Enable digital functionality for PF1 and PF2
-}
-
 // Function to initialize buttons (PF0 for lock and PF4 for unlock)
 void initButtons(void) {
     // Enable Port F (GPIO Port F)
@@ -482,19 +463,27 @@ void initButtons(void) {
 void toggleDoorLock(void) {
     if (doorLocked) {
         // Door is unlocked
-        //GPIO_PORTF_DATA_R &= ~GREEN_LED;  // Turn off green LED (locked)
-        //GPIO_PORTF_DATA_R |= RED_LED;     // Turn on red LED (unlocked)
         doorLocked = 0;
         clearRow(&dis,0);
 				displayTextOnLCD(&dis, "Door UnLocked", 0, 0);  // Display "Door Locked" on the second row
     } else {
         // Door is locked
-        //GPIO_PORTF_DATA_R &= ~RED_LED;   // Turn off red LED (unlocked)
-        //GPIO_PORTF_DATA_R |= GREEN_LED;  // Turn on green LED (locked)
         doorLocked = 1;
         clearRow(&dis,0);
 				displayTextOnLCD(&dis, "Door Locked", 0, 0);  // Display "Door Locked" on the second row
     }
+}
+
+void showdoorstatus(void){
+		if (doorLocked) {
+			// Door is unlocked
+        clearRow(&dis,0);
+				displayTextOnLCD(&dis, "Door Locked", 0, 0);  // Display "Door Locked" on the second row
+    } else {
+        // Door is locked
+        clearRow(&dis,0);
+				displayTextOnLCD(&dis, "Door UnLocked", 0, 0);  // Display "Door Locked" on the second row
+		}
 }
 
 
@@ -592,8 +581,13 @@ void SpeedCheckTask(void *pvParameters) {
         }
 
         // Check if the speed exceeds the threshold for auto-locking
-        if (potentiometerValue >= SPEED_THRESHOLD && doorLocked == 0) {  // 40 km/h threshold for automatic locking
+        if (potentiometerValue >= SPEED_THRESHOLD && doorLocked == 0 && globalSpeed==0) {  // 40 km/h threshold for automatic locking
             toggleDoorLock();  // Lock the door
+						globalSpeed =1;
+        }
+				
+				 if (potentiometerValue < SPEED_THRESHOLD ) { 
+						globalSpeed =0;
         }
 
         // Wait for the mutex before updating the display
@@ -627,8 +621,8 @@ void initUltrasonicLEDs(void) {
     SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R5;  // Enable clock for Port F
     while ((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R5) == 0) {}  // Wait until Port F is ready
 
-    GPIO_PORTF_DIR_R |= (0x02 | 0x04 | 0x08); 
-    GPIO_PORTF_DEN_R |= (0x02 | 0x04 | 0x08); 
+    GPIO_PORTF_DIR_R |= (RED_LED | BLUE_LED | GREEN_LED); 
+    GPIO_PORTF_DEN_R |= (RED_LED | BLUE_LED | GREEN_LED); 
 }
 
 
@@ -706,15 +700,15 @@ void Timer0ACapture_init(void)
 // Function to control the RGB LED based on proximity
 void controlLEDAndBuzzer(uint32_t distance) {
     // Turn off all LEDs first
-    GPIO_PORTF_DATA_R &= ~(0x02 | 0x04 | 0x08);
+    GPIO_PORTF_DATA_R &= ~(RED_LED | BLUE_LED | GREEN_LED);
 
     // Turn on LED based on distance
     if (distance > 100) {  // Safe zone (Green LED)
-        GPIO_PORTF_DATA_R |= 0x08;
+        GPIO_PORTF_DATA_R |= GREEN_LED;
     } else if (distance > 30) {  // Caution zone (Yellow LED)
-        GPIO_PORTF_DATA_R |= 0x04;
+        GPIO_PORTF_DATA_R |= BLUE_LED;
     } else {  // Danger zone (Red LED)
-        GPIO_PORTF_DATA_R |= 0x02;
+        GPIO_PORTF_DATA_R |= RED_LED;
     }
 
     // Control buzzer: beep faster as the distance decreases
@@ -742,70 +736,105 @@ void UltrasonicTask(void *pvParameters) {
 			if (gearReverse ==1){
 			  time = Measure_distance(); /* take pulse duration measurement */ 
 				distance = (time * 10625)/10000000; /* convert pulse duration into distance */
-        
 				clearRow(&dis,1);
-				char diststr[20];
         snprintf(diststr, sizeof(diststr), "Dist = %.1f cm", distance);
 				// Take the mutex before updating the display
         if (xSemaphoreTake(xMutex, portMAX_DELAY)) {
-             // Display the distance on the LCD (first row)
              displayTextOnLCD(&dis, diststr, 1, 0);  
-						// Release the mutex after updating the display
              xSemaphoreGive(xMutex);
          }
 				controlLEDAndBuzzer(distance);  // Control LEDs and buzzer based on distance
 			}
 			else {
-				GPIO_PORTF_DATA_R &= ~(0x02 | 0x04 | 0x08 | BUZZER_PIN);
+				GPIO_PORTF_DATA_R &= ~(RED_LED | BLUE_LED | GREEN_LED | BUZZER_PIN);
 			}
 			vTaskDelay(pdMS_TO_TICKS(500));  // Delay for 500ms before next measurement
     }
 }
 /********************************************************************************************************/
 void initIgnitionSwitch(void) {
-    SYSCTL->RCGCGPIO |= (1 << 1);                        // Clock to PortB
-    while((SYSCTL->PRGPIO & (1 << 1)) == 0);             // Ensure Clock worked for PortB
-    GPIOB->DIR &= ~(1 << 4);                             // PB4 input (Ignition switch)
-    GPIOB->DEN |= (1 << 4);                              // Digital enable for PB4
-    GPIOB->PDR |= (1 << 4);                              // Pull-down resistor on PB4 (reads LOW when not pressed)
-
-    GPIOB->IS &= ~(1 << 4);                              // Edge sensitive for PB4 (clear previous configuration)
-    GPIOB->IEV &= ~(1 << 4);                             // Falling edge (detect HIGH to LOW transition)
-    GPIOB->ICR |= (1 << 4);                              // Clear any pending interrupts on PB4
-    GPIOB->IM |= (1 << 4);                               // Unmask interrupt on PB4
-    NVIC_EnableIRQ(GPIOB_IRQn);                          // Enable GPIOB interrupt in NVIC
+    SYSCTL->RCGCGPIO |= (1 << 1);                       // Clock to PortB
+    while((SYSCTL->PRGPIO & (1 << 1)) == 0);            // Ensure Clock worked for PortB
+    GPIOB->DIR &= ~(1 << 4);                            // PB4 input (Ignition switch)
+    GPIOB->DEN |= (1 << 4);                             // Digital enable for PB4
+    GPIOB->PDR |= (1 << 4);                             // Pull-down resistor on PB4 (reads LOW when not pressed)
 }
-
-// This is the interrupt handler for GPIO Port B
-void GPIOB_Handler(void) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    GPIOB->ICR = (1 << 4);  // Clear PB4 interrupt flag (this clears the flag to avoid re-triggering)
-
-    // Give the semaphore from ISR to unblock the task
-    xSemaphoreGiveFromISR(xBinarySemaphore, &xHigherPriorityTaskWoken);
-
-    // If a higher priority task was woken, yield the processor to it
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-}
-
 void IgnitionMonitorTask(void *pvParameters) {
     while (1) {
-        ignitionSwitchState = GPIO_PORTB_DATA_R & (1 << 4);  // Check the state of PB4 (ignition switch)
+        ignitionSwitchState = GPIO_PORTB_DATA_R & IGNITION_SWITCH;
 
-        // Wait for the semaphore to be given from the ISR (this happens when the falling edge occurs)
-        if (xSemaphoreTake(xBinarySemaphore, portMAX_DELAY)) {
-            // Check if Ignition Switch is OFF (PB4 is LOW)
-            if ((GPIO_PORTB_DATA_R & (1 << 4)) == 0) {
-                if (doorLocked == 1) {
-                    toggleDoorLock();  // Unlock the doors when ignition is OFF
-                }
+        // Check if the ignition is off and the door is locked and globalLock is not set
+        if ((GPIO_PORTB_DATA_R & IGNITION_SWITCH) == 0 && doorLocked == 1 && globalLock == 0) {
+            if (xSemaphoreTake(xMutex, portMAX_DELAY)) {
+                toggleDoorLock();  // Unlock the doors when ignition is OFF
+                globalLock = 1;     // Set the global lock to prevent further toggles
+                xSemaphoreGive(xMutex);
             }
         }
+
+        // When the ignition switch turns on, reset the global lock (but don't toggle)
+        if ((GPIO_PORTB_DATA_R & IGNITION_SWITCH) == 0x10) {
+            globalLock = 0;
+        }
+
+        vTaskDelay(500); // Add a small delay to avoid unnecessary fast polling
+    }
+}
+
+/*********************************************************************************************************/ 
+// Function to initialize the driver's door input (assuming connected to PD0)
+void initDriverDoor(void) {
+    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3;  // Enable clock for Port D
+    while ((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R3) == 0) {}  // Wait until Port D is ready
+
+    // Configure PD0 as input (assuming the door state is read from this pin)
+    GPIO_PORTD_DIR_R &= ~0x01;  // Set PD0 as input (0 = input, 1 = output)
+    GPIO_PORTD_DEN_R |= 0x01;   // Enable digital function on PD0
+
+    // Enable pull-down resistor on PD0 (if the door state uses an active-high switch)
+    GPIO_PORTD_PDR_R |= 0x01;   // Enable pull-down resistor on PD0
+}
+
+// Function to read the driver's door state (open or closed)
+int isDoorOpen(void) {
+    // Check if PD0 is high (active-high switch for door open with pull-down resistor)
+    return (GPIO_PORTD_DATA_R & 0x01) == 0x01;  // Returns 1 if door is open, 0 if closed
+}
+
+// Buzzer control function
+void controlBuzzer(int state) {
+    if (state) {
+        GPIO_PORTB_DATA_R |= BUZZER_PIN;  // Turn on buzzer (PB0 high)
+    } else {
+        GPIO_PORTB_DATA_R &= ~BUZZER_PIN;  // Turn off buzzer (PB0 low)
+    }
+}
+
+// Function to handle the alert when the door is open and vehicle is moving
+void VehicleAlertTask(void *pvParameters) {
+    while (1) {
+        // Read the current speed and check if the door is open
+        float speed = readPotentiometer();  
+        int doorOpen = isDoorOpen();  // Check if door is open
+
+        // If vehicle is moving and the driver's door is open, trigger buzzer and display message
+        if (speed > 10 && doorOpen) {
+            controlBuzzer(1);  // Turn on buzzer
+            if (xSemaphoreTake(xMutex, portMAX_DELAY)) {
+                // Display "Driver Door Open!" message on the LCD
+                clearRow(&dis, 0);  // Clear the first row
+                displayTextOnLCD(&dis, "Driver Door Open!", 0, 0);
+                xSemaphoreGive(xMutex);
+            }
+        } else {
+						showdoorstatus();
+            controlBuzzer(0);  // Turn off buzzer
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(500));  // Delay for 500ms before checking again
     }
 }
 /*********************************************************************************************************/ 
-
 
 int main(void) {
 	
@@ -813,20 +842,20 @@ int main(void) {
 	LCDI2CInit(&dis, LCD_ADDR, LCD_COLS, LCD_ROWS);
 	initBuzzer();
 	initButtons();
-  //initIgnitionSwitch();
+  initIgnitionSwitch();
 	initUltrasonicLEDs();
 	initGearSwitch();
   initPotentiometer(); 
-	//xBinarySemaphore = xSemaphoreCreateBinary();
+	initDriverDoor();
 	xMutex = xSemaphoreCreateMutex();
 	
   // Create FreeRTOS tasks
   xTaskCreate(ButtonControlTask, "Button Control Task", 128, NULL, 1, NULL);
-	//xTaskCreate(IgnitionMonitorTask, "Ignition Monitor", 128, NULL, 1, NULL);
+	xTaskCreate(IgnitionMonitorTask, "Ignition Monitor", 128, NULL, 1, NULL);
 	xTaskCreate(SpeedCheckTask, "Speed Check Task", 128, NULL, 2, NULL);
 	xTaskCreate(UltrasonicTask, "Ultrasonic Task", 128, NULL, 1, NULL);
 	xTaskCreate(GearSwitchTask, "Gear Switch Task", 128, NULL, 1, NULL);
-	
+	xTaskCreate(VehicleAlertTask, "Driver Door Task", 128, NULL, 1, NULL);
 
   // Start the FreeRTOS scheduler
 	vTaskStartScheduler();
