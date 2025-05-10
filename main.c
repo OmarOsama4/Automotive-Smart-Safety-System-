@@ -18,9 +18,9 @@
 
 /***********************************************************************************************************/
 // The potentiometer     -> PE2
-// The Buzzar 					 -> PB0
+// The Buzzar 			     -> PB0
 // Echo                  -> PB6
-// Trigger							 -> PA4
+// Trigger				 			 -> PA4
 // GearShift             -> PB7
 // Red Led               -> PD2
 // Blue Led              -> PD1
@@ -31,9 +31,9 @@
 /***********************************************************************************************************/
 #define IGNITION_SWITCH 0x10
 #define SPEED_THRESHOLD 40
-#define MAX_DISTANCE 100 // Maximum distance in cm (for Green LED)
+#define MAX_DISTANCE 100 
 /***********************************************************************************************************/
-float time; 
+float time;
 float distance;
 uint32_t gearSwitchState;
 SemaphoreHandle_t xMutex;
@@ -41,6 +41,9 @@ char diststr[20];
 char speedStr[20];
 bool globalSpeed = 0;
 bool globalLock = 0;
+int doorOpen; 
+float speedAR;
+bool driverdoor =0;
 /***********************************************************************************************************/
 void GearSwitchTask(void *pvParameters);
 void ButtonControlTask(void *pvParameters);
@@ -79,7 +82,6 @@ int main(void)
 }
 
 /***********************************************************************************************************/
-
 // FreeRTOS Task to monitor and handle gear switching
 void GearSwitchTask(void *pvParameters)
 {
@@ -98,7 +100,6 @@ void GearSwitchTask(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(100)); // Short delay before checking again
     }
 }
-
 /********************************************************************************************************/
 // FreeRTOS Task to check button presses for manual door lock/unlock
 void ButtonControlTask(void *pvParameters)
@@ -108,25 +109,25 @@ void ButtonControlTask(void *pvParameters)
         if (xSemaphoreTake(xMutex, portMAX_DELAY))
         {
             if ((GPIO_PORTF_DATA_R & LOCK_BUTTON) == 0)
-            { 
+            {
                 if (doorLocked == 0)
                 {
                     toggleDoorLock(); // Lock the door
                 }
-                vTaskDelay(pdMS_TO_TICKS(200)); 
+                vTaskDelay(pdMS_TO_TICKS(200));
             }
 
             if ((GPIO_PORTF_DATA_R & UNLOCK_BUTTON) == 0)
-            { 
+            {
                 if (doorLocked == 1)
                 {
                     toggleDoorLock(); // Unlock the door
                 }
-                vTaskDelay(pdMS_TO_TICKS(200)); 
+                vTaskDelay(pdMS_TO_TICKS(200));
             }
             xSemaphoreGive(xMutex);
         }
-        vTaskDelay(pdMS_TO_TICKS(100)); 
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 /*********************************************************************************************************/
@@ -141,12 +142,12 @@ void SpeedCheckTask(void *pvParameters)
             float potentiometerValue = readPotentiometer();
             if (potentiometerValue == -1)
             {
-                vTaskDelay(pdMS_TO_TICKS(1000)); 
+                vTaskDelay(pdMS_TO_TICKS(1000));
                 continue;
             }
             if (potentiometerValue >= SPEED_THRESHOLD && doorLocked == 0 && globalSpeed == 0)
-            {                     
-                toggleDoorLock(); 
+            {
+                toggleDoorLock();
                 globalSpeed = 1;
             }
 
@@ -166,7 +167,6 @@ void SpeedCheckTask(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
-
 /********************************************************************************************************/
 // Function to control the RGB LED based on proximity
 void controlLED(uint32_t distance)
@@ -194,21 +194,21 @@ void controlBuzzerSN(uint32_t distance)
 {
     // Control buzzer: beep faster as the distance decreases
     if (distance > 100)
-    { // Safe zone
+    {                                     // Safe zone
         GPIO_PORTB_DATA_R |= BUZZER_PIN;  // Turn on buzzer
         vTaskDelay(pdMS_TO_TICKS(100));   // Buzzer beep for a short time
         GPIO_PORTB_DATA_R &= ~BUZZER_PIN; // Turn off buzzer
         vTaskDelay(pdMS_TO_TICKS(100));   // Delay for faster beep
     }
     else if (distance > 30)
-    { // Caution zone
+    {                                     // Caution zone
         GPIO_PORTB_DATA_R |= BUZZER_PIN;  // Turn on buzzer
         vTaskDelay(pdMS_TO_TICKS(30));    // Buzzer beep for a short time
         GPIO_PORTB_DATA_R &= ~BUZZER_PIN; // Turn off buzzer
         vTaskDelay(pdMS_TO_TICKS(30));    // Delay for faster beep
     }
     else
-    { // Danger zone (continuous buzzer)
+    {                                    // Danger zone (continuous buzzer)
         GPIO_PORTB_DATA_R |= BUZZER_PIN; // Keep buzzer on
     }
 }
@@ -223,11 +223,10 @@ void UltrasonicTask(void *pvParameters)
         {
             time = Measure_distance();            /* take pulse duration measurement */
             distance = (time * 10625) / 10000000; /* convert pulse duration into distance */
-            controlLED(distance); 
-						controlBuzzerSN(distance);						
+            controlLED(distance);
+            controlBuzzerSN(distance);
             clearRow(&dis, 1);
             snprintf(diststr, sizeof(diststr), "Dist = %.1f cm", distance);
-            // Take the mutex before updating the display
             if (xSemaphoreTake(xMutex, portMAX_DELAY))
             {
                 displayTextOnLCD(&dis, diststr, 1, 0);
@@ -267,34 +266,33 @@ void IgnitionMonitorTask(void *pvParameters)
 }
 
 /*********************************************************************************************************/
-
 // Function to handle the alert when the door is open and vehicle is moving
 void VehicleAlertTask(void *pvParameters)
 {
     while (1)
     {
-        // Read the current speed and check if the door is open
-        float speed = readPotentiometer();
-        int doorOpen = isDoorOpen(); // Check if door is open
-
-        // If vehicle is moving and the driver's door is open, trigger buzzer and display message
-        if (speed > 10 && doorOpen)
-        {
-            controlBuzzer(1); // Turn on buzzer
-            if (xSemaphoreTake(xMutex, portMAX_DELAY))
-            {
-                // Display "Driver Door Open!" message on the LCD
-                clearRow(&dis, 0); // Clear the first row
-                displayTextOnLCD(&dis, "Driver Door Open!", 0, 0);
-                xSemaphoreGive(xMutex);
-            }
-        }
-        else
-        {
-            showdoorstatus();
-            controlBuzzer(0); // Turn off buzzer
-        }
-
+				if (gearReverse == 0){
+						speedAR = readPotentiometer();
+						doorOpen = isDoorOpen(); 
+						// If vehicle is moving and the driver's door is open, trigger buzzer and display message
+						if (speedAR > 10 && doorOpen && driverdoor ==0)
+						{
+								driverdoor =1;
+								controlBuzzer(1); // Turn on buzzer
+								if (xSemaphoreTake(xMutex, portMAX_DELAY))
+								{
+										clearRow(&dis, 0);
+										displayTextOnLCD(&dis, "Driver Door Open!", 0, 0);
+										xSemaphoreGive(xMutex);
+								}
+						}
+						else if (!doorOpen && driverdoor ==1)
+						{		
+								driverdoor =0;
+								showdoorstatus();
+								controlBuzzer(0); // Turn off buzzer
+						}								
+				}
         vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 500ms before checking again
     }
 }

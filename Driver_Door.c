@@ -19,7 +19,6 @@ void initDriverDoor(void)
 // Function to read the driver's door state (open or closed)
 int isDoorOpen(void)
 {
-    // Check if PD0 is high (active-high switch for door open with pull-down resistor)
     return (GPIO_PORTD_DATA_R & 0x01) == 0x01; // Returns 1 if door is open, 0 if closed
 }
 
