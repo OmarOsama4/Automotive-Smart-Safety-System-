@@ -396,14 +396,84 @@
               <FilePath>.\tm4c123gh6pm.h</FilePath>
             </File>
             <File>
-              <FileName>Port_Config.c</FileName>
+              <FileName>LCD.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\Port_Config.c</FilePath>
+              <FilePath>.\LCD.c</FilePath>
             </File>
             <File>
-              <FileName>Port_Config.h</FileName>
+              <FileName>LCD.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\Port_Config.h</FilePath>
+              <FilePath>.\LCD.h</FilePath>
+            </File>
+            <File>
+              <FileName>Buzzer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Buzzer.c</FilePath>
+            </File>
+            <File>
+              <FileName>Buzzer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Buzzer.h</FilePath>
+            </File>
+            <File>
+              <FileName>GearSwitch.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\GearSwitch.c</FilePath>
+            </File>
+            <File>
+              <FileName>GearSwitch.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\GearSwitch.h</FilePath>
+            </File>
+            <File>
+              <FileName>ManualButtons.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\ManualButtons.c</FilePath>
+            </File>
+            <File>
+              <FileName>ManualButtons.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\ManualButtons.h</FilePath>
+            </File>
+            <File>
+              <FileName>Potentiometer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Potentiometer.c</FilePath>
+            </File>
+            <File>
+              <FileName>Potentiometer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Potentiometer.h</FilePath>
+            </File>
+            <File>
+              <FileName>UltraSonic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\UltraSonic.c</FilePath>
+            </File>
+            <File>
+              <FileName>UltraSonic.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\UltraSonic.h</FilePath>
+            </File>
+            <File>
+              <FileName>IgnitionSwitch.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\IgnitionSwitch.c</FilePath>
+            </File>
+            <File>
+              <FileName>IgnitionSwitch.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\IgnitionSwitch.h</FilePath>
+            </File>
+            <File>
+              <FileName>Driver_Door.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Driver_Door.c</FilePath>
+            </File>
+            <File>
+              <FileName>Driver_Door.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Driver_Door.h</FilePath>
             </File>
           </Files>
         </Group>
