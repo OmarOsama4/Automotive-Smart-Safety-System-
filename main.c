@@ -41,7 +41,7 @@ char diststr[20];
 char speedStr[20];
 bool globalSpeed = 0;
 bool globalLock = 0;
-int doorOpen; 
+bool doorOpen; 
 float speedAR;
 bool driverdoor =0;
 bool carStatus =0;
@@ -383,27 +383,32 @@ void VehicleAlertTask(void *pvParameters)
 {
     while (1)
     {
-				if (gearReverse == 0){
-						speedAR = readPotentiometer();
-						doorOpen = isDoorOpen(); 
-						// If vehicle is moving and the driver's door is open, trigger buzzer and display message
-						if (speedAR > 10 && doorOpen && driverdoor ==0)
+				if (carStatus ==1){
+						if (gearReverse == 0)
 						{
-								driverdoor =1;
-								controlBuzzer(1); // Turn on buzzer
-								if (xSemaphoreTake(xMutex, portMAX_DELAY))
-								{
-										clearRow(&dis, 0);
-										displayTextOnLCD(&dis, "Driver Door Open!", 0, 0);
-										xSemaphoreGive(xMutex);
+								if (doorLocked==0){
+										speedAR = readPotentiometer();
+										doorOpen = isDoorOpen(); 
+										// If vehicle is moving and the driver's door is open, trigger buzzer and display message
+										if (speedAR > 10 && doorOpen && driverdoor ==0)
+										{
+												driverdoor =1;
+												controlBuzzer(1); // Turn on buzzer
+												if (xSemaphoreTake(xMutex, portMAX_DELAY))
+												{
+														clearRow(&dis, 0);
+														displayTextOnLCD(&dis, "Driver Door Open!", 0, 0);
+														xSemaphoreGive(xMutex);
+												}
+										}
+										else if (!doorOpen && driverdoor ==1)
+										{		
+												driverdoor =0;
+												showdoorstatus();
+												controlBuzzer(0); // Turn off buzzer
+										}
 								}
 						}
-						else if (!doorOpen && driverdoor ==1)
-						{		
-								driverdoor =0;
-								showdoorstatus();
-								controlBuzzer(0); // Turn off buzzer
-						}								
 				}
         vTaskDelay(pdMS_TO_TICKS(500)); // Delay for 500ms before checking again
     }
