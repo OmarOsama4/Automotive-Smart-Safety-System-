@@ -27,14 +27,14 @@ void toggleDoorLock(void)
         // Door is unlocked
         doorLocked = 0;
         clearRow(&dis, 0);
-        displayTextOnLCD(&dis, "Door UnLocked", 0, 0); // Display "Door UnLocked"
+        displayTextOnLCD(&dis, "Door UnLocked", 0, 0); 
     }
     else
     {
         // Door is locked
         doorLocked = 1;
         clearRow(&dis, 0);
-        displayTextOnLCD(&dis, "Door Locked", 0, 0); // Display "Door Locked"
+        displayTextOnLCD(&dis, "Door Locked", 0, 0); 
     }
 }
 
@@ -44,12 +44,12 @@ void showdoorstatus(void)
     {
         // Door is locked
         clearRow(&dis, 0);
-        displayTextOnLCD(&dis, "Door Locked", 0, 0); // Display "Door Locked"
+        displayTextOnLCD(&dis, "Door Locked", 0, 0); 
     }
     else
     {
         // Door is unlocked
         clearRow(&dis, 0);
-        displayTextOnLCD(&dis, "Door UnLocked", 0, 0); // Display "Door UnLocked"
+        displayTextOnLCD(&dis, "Door UnLocked", 0, 0); 
     }
 }

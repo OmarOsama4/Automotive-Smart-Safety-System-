@@ -34,3 +34,13 @@ void controlBuzzer(int state)
         GPIO_PORTB_DATA_R &= ~BUZZER_PIN; // Turn off buzzer (PB0 low)
     }
 }
+
+void showDoorOpen(void){
+		clearRow(&dis,1); 
+		displayTextOnLCD(&dis,"Door Open",1,0);
+}
+
+void showDoorClose(void){
+		clearRow(&dis,1); 
+		displayTextOnLCD(&dis,"Door Close",1,0);
+}
