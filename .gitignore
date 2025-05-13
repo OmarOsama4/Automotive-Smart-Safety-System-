@@ -1,37 +1,8 @@
-# Compiled object files
-*.o
-*.elf
-*.bin
-*.a
-*.out
-*.d
-
-# Build directories
-/build/
-/obj/
-/out/
-
-# IDE and project-specific files
-.vscode/
-.idea/
-.project
-.settings/
-.cproject
-*.user
-*.suo
-*.userprefs
-
-# Temporary system files
-*.log
-*.tmp
-*.bak
-*.swp
-.DS_Store
-Thumbs.db
-
-# Generated documentation and config files
-*.md
-*.txt
-
-# RTOS and project-specific files
-/RTOS_Project*
+**/Listings
+**/Objects
+**/rvmdk
+*~
+*.uvguix*
+*.uvoptx*
+*.uvoptx
+*.scvd
